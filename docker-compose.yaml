@@ -1,0 +1,39 @@
+version: '3.4'
+
+services:
+    redis:
+        container_name: celery-redis
+        image: redis:5.0.7
+        ports:
+            - "6379:6379"
+
+    worker:
+        build: ./worker
+        container_name: celery-worker
+        depends_on:
+            - redis
+        environment:
+            - REDIS_HOST=redis
+        links:
+            - redis:redis
+
+    api:
+        build: ./api
+        container_name: celery-api
+        depends_on:
+            - redis
+            - worker
+        environment:
+            - REDIS_HOST=redis
+        links:
+            - redis:redis
+        ports:
+            - "8000:8000"
+
+    client:
+        build: ./client
+        container_name: celery-client
+        environment:
+            - API_URL=http://api:8000
+        links:
+            - api:api
