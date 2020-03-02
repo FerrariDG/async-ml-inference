@@ -1,5 +1,6 @@
-from diagrams import Diagram, Cluster
+from diagrams import Diagram
 from diagrams.onprem.inmemory import Redis
+from diagrams.onprem.queue import RabbitMQ
 from diagrams.k8s.compute import Pod
 
 graph_attr = {
@@ -27,18 +28,15 @@ with Diagram(
     edge_attr={"color": "#566573"}
 ):
 
-    client = Pod("Client")
+    client = Pod("Clients")
 
-    api = Pod("API")
+    api = Pod("APIs")
 
-    broker = Redis("Broker")
+    broker = RabbitMQ("Broker")
 
     database = Redis("Database")
 
-    with Cluster("Celery") as celery:
-        Pod("Worker")
-        worker = Pod("Worker")
-        Pod("Worker")
+    worker = Pod("Workers")
 
     client << api << database << worker
 
