@@ -10,26 +10,33 @@ from starlette.status import (
     HTTP_500_INTERNAL_SERVER_ERROR
 )
 
-REDIS_HOST = getenv("REDIS_HOST", "localhost")
+REDIS_HOST = getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = getenv("REDIS_PORT", "6379")
 REDIS_USER = getenv("REDIS_USER", "")
 REDIS_PASS = getenv("REDIS_PASS", "")
+REDIS_DB = getenv("REDIS_DB_BACKEND", "0")
 
-REDIS_DB_BROKER = getenv("REDIS_DB_BROKER", "0")
-REDIS_DB_BACKEND = getenv("REDIS_DB_BACKEND", "1")
+RABBITMQ_HOST = getenv("RABBITMQ_HOST", "127.0.0.1")
+RABBITMQ_PORT = getenv("RABBITMQ_PORT", "5672")
+RABBITMQ_USER = getenv("RABBITMQ_USER", "guest")
+RABBITMQ_PASS = getenv("RABBITMQ_PASS", "guest")
+RABBITMQ_VHOST = getenv("RABBITMQ_VHOST", "")
 
-BROKER = "redis://{userpass}{hostname}{port}{db}".format(
-    hostname=REDIS_HOST,
-    userpass=REDIS_USER + ":" + REDIS_PASS + "@" if REDIS_USER else "",
-    port=":" + REDIS_PORT if REDIS_PORT else "",
-    db="/" + REDIS_DB_BROKER if REDIS_DB_BROKER else ""
+# RabbitMQ connection string: amqp://user:pass@localhost:5672/myvhost
+
+BROKER = "amqp://{userpass}{hostname}{port}{vhost}".format(
+    hostname=RABBITMQ_HOST,
+    userpass=RABBITMQ_USER + ":" + RABBITMQ_PASS + "@" if RABBITMQ_USER else "",
+    port=":" + RABBITMQ_PORT if RABBITMQ_PORT else "",
+    vhost=RABBITMQ_VHOST
 )
 
+# Redis connection string: redis://user:pass@hostname:port/db_number
 BACKEND = "redis://{userpass}{hostname}{port}{db}".format(
     hostname=REDIS_HOST,
     userpass=REDIS_USER + ":" + REDIS_PASS + "@" if REDIS_USER else "",
     port=":" + REDIS_PORT if REDIS_PORT else "",
-    db="/" + REDIS_DB_BACKEND if REDIS_DB_BACKEND else ""
+    db="/" + REDIS_DB if REDIS_DB else ""
 )
 
 api = FastAPI()
