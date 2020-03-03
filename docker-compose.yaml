@@ -1,34 +1,53 @@
 version: '3.4'
 
 services:
+    rabbitmq:
+        container_name: celery-broker
+        image: rabbitmq:3.8.2-management-alpine
+        ports:
+            - "8080:15672"
+            - "5672:5672"
+        networks:
+            - network
+
     redis:
-        container_name: celery-redis
+        container_name: celery-database
         image: redis:5.0.7
         ports:
             - "6379:6379"
+        networks:
+            - network
 
     worker:
         build: ./worker
         container_name: celery-worker
         depends_on:
             - redis
+            - rabbitmq
         environment:
             - REDIS_HOST=redis
+            - RABBITMQ_HOST=rabbitmq
         links:
             - redis:redis
+            - rabbitmq:rabbitmq
+        networks:
+            - network
 
     api:
         build: ./api
         container_name: celery-api
         depends_on:
-            - redis
             - worker
         environment:
             - REDIS_HOST=redis
+            - RABBITMQ_HOST=rabbitmq
         links:
             - redis:redis
+            - rabbitmq:rabbitmq
         ports:
             - "8000:8000"
+        networks:
+            - network
 
     client:
         build: ./client
@@ -37,3 +56,8 @@ services:
             - API_URL=http://api:8000
         links:
             - api:api
+        networks:
+            - network
+
+networks:
+    network: {}
