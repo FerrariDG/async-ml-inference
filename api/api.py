@@ -1,10 +1,16 @@
+from typing import (
+    Any,
+    Dict,
+    Optional
+)
 from os import getenv
 
 from celery import Celery, states
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
 from starlette.status import (
+    HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_202_ACCEPTED,
     HTTP_500_INTERNAL_SERVER_ERROR
@@ -23,12 +29,11 @@ RABBITMQ_PASS = getenv("RABBITMQ_PASS", "guest")
 RABBITMQ_VHOST = getenv("RABBITMQ_VHOST", "")
 
 # RabbitMQ connection string: amqp://user:pass@localhost:5672/myvhost
-
 BROKER = "amqp://{userpass}{hostname}{port}{vhost}".format(
     hostname=RABBITMQ_HOST,
     userpass=RABBITMQ_USER + ":" + RABBITMQ_PASS + "@" if RABBITMQ_USER else "",
     port=":" + RABBITMQ_PORT if RABBITMQ_PORT else "",
-    vhost=RABBITMQ_VHOST
+    vhost="/" + RABBITMQ_VHOST if RABBITMQ_VHOST else ""
 )
 
 # Redis connection string: redis://user:pass@hostname:port/db_number
@@ -48,36 +53,66 @@ TASKS = {
 
 
 class UrlItem(BaseModel):
-    url: str
+    audio_url: str
+    callback: bool = False
+
+
+class TaskResult(BaseModel):
+    id: str
+    status: str
+    error: Optional[str] = None
+    result: Optional[Dict[Any, Any]] = None
+
+
+def send_result(task_id):
+    while True:
+        result = worker.AsyncResult(task_id)
+        if result.state in states.READY_STATES:
+            break
+
+    output = TaskResult(
+        id=task_id,
+        status=result.state
+    )
+
+    if result.failed():
+        output.error = str(result.info)
+    elif result.state == states.SUCCESS:
+        output.result = result.get()
+
+    print(output)  # Send result to somewhere
 
 
 @api.post("/audio/length", status_code=HTTP_201_CREATED)
-def create_task(data: UrlItem):
-    task = worker.send_task(TASKS['length'], kwargs={'url': data.url})
-    return {"task_id": task.id}
+def create_task(data: UrlItem, queue: BackgroundTasks):
+    task = worker.send_task(
+        name=TASKS['length'],
+        kwargs={'audio_url': data.audio_url}
+    )
+    if data.callback:
+        queue.add_task(send_result, task.id)
+    return {"id": task.id}
 
 
 @api.get("/task/{task_id}")
 def get_task_result(task_id: str):
-    result = worker.AsyncResult(task_id)
 
-    if result.state not in states.READY_STATES:
-        return JSONResponse(
-            status_code=HTTP_202_ACCEPTED,
-            content={
-                "task_id": task_id,
-                "status": result.state
-            }
-        )
+    celery_result = worker.AsyncResult(task_id)
 
-    if result.failed():
-        return JSONResponse(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "task_id": task_id,
-                "status": states.FAILURE,
-                "error": str(result.info)
-            }
-        )
+    output = TaskResult(
+        id=task_id,
+        status=celery_result.state
+    )
+    status_code = HTTP_202_ACCEPTED
 
-    return {"task_id": task_id, "status": states.SUCCESS, "result": result.get()}
+    if celery_result.failed():
+        output.error = str(celery_result.info)
+        status_code = HTTP_500_INTERNAL_SERVER_ERROR
+    elif celery_result.state == states.SUCCESS:
+        output.result = celery_result.get()
+        status_code = HTTP_200_OK
+
+    return JSONResponse(
+        status_code=status_code,
+        content=output.dict()
+    )
