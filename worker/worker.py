@@ -1,5 +1,10 @@
 from io import BytesIO
 from os import getenv
+from time import sleep
+from typing import (
+    Any,
+    Dict
+)
 from urllib import request
 
 from celery import Celery, states
@@ -19,12 +24,11 @@ RABBITMQ_PASS = getenv("RABBITMQ_PASS", "guest")
 RABBITMQ_VHOST = getenv("RABBITMQ_VHOST", "")
 
 # RabbitMQ connection string: amqp://user:pass@localhost:5672/myvhost
-
 BROKER = "amqp://{userpass}{hostname}{port}{vhost}".format(
     hostname=RABBITMQ_HOST,
     userpass=RABBITMQ_USER + ":" + RABBITMQ_PASS + "@" if RABBITMQ_USER else "",
     port=":" + RABBITMQ_PORT if RABBITMQ_PORT else "",
-    vhost=RABBITMQ_VHOST
+    vhost="/" + RABBITMQ_VHOST if RABBITMQ_VHOST else ""
 )
 
 # Redis connection string: redis://user:pass@hostname:port/db_number
@@ -39,10 +43,10 @@ worker = Celery("audio", broker=BROKER, backend=BACKEND)
 
 
 @worker.task(bind=True, name="worker.audio_length")
-def audio_length(self, url: str) -> int:
+def audio_length(self, audio_url: str) -> Dict[str, Any]:
 
     try:
-        payload = request.urlopen(url)
+        payload = request.urlopen(audio_url)
         data = payload.read()
     except Exception as e:
         self.update_state(
@@ -68,4 +72,9 @@ def audio_length(self, url: str) -> int:
         )
         raise Ignore()
 
-    return get_duration(y, sr)
+    length = get_duration(y, sr)
+    sleep(length / 10)  # Simulate a long task processing
+
+    return {
+        'audio_length': length
+    }
