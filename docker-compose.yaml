@@ -37,7 +37,8 @@ services:
         build: ./api
         container_name: celery-api
         depends_on:
-            - worker
+            - redis
+            - rabbitmq
         environment:
             - REDIS_HOST=redis
             - RABBITMQ_HOST=rabbitmq

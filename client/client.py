@@ -1,5 +1,6 @@
 from os import getenv
 from multiprocessing import cpu_count
+from random import random
 
 from joblib import Parallel, delayed
 from requests import post, get
@@ -21,8 +22,9 @@ STATUS_PENDING = 202
 
 
 def make_post(url):
-    response = post(ENDPOINT_LENGTH, json={'url': url})
-    task_id = response.json()['task_id'] if response.status_code == STATUS_CREATED else None
+    callback = random() < 0.5
+    response = post(ENDPOINT_LENGTH, json={'audio_url': url, 'callback': callback})
+    task_id = response.json()['id'] if response.status_code == STATUS_CREATED else None
     return (response.status_code, task_id)
 
 
@@ -50,4 +52,4 @@ if __name__ == "__main__":
 
     for idx, data in enumerate(results):
         output = data['result'] if data['status'] == 'SUCCESS' else data['error']
-        print(f"{idx+1:2d} - {data['task_id']} - {data['status']} - {output}")
+        print(f"{idx+1:2d} - {data['id']} - {data['status']} - {output}")

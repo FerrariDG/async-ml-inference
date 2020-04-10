@@ -26,7 +26,7 @@ The workers can subscribe to specific queues and can execute different types of 
 
 The `API` has two endpoints: one for post the tasks and one to get the results.
 
-The **post** endpoint `/audio/length` receives in the request body a URL containing an audio file to be analyzed. In this case, it will just get the audio length in seconds. The endpoint sends a task to the queue and returns a `task id` to the client with Http code response 201 (`HTTP_201_CREATED`).
+The **post** endpoint `/audio/length` receives in the request body a URL containing an audio file to be analyzed. In this case, it will just get the audio length in seconds. The endpoint sends a task to the queue and returns a `task id` to the client with HTTP code response 201 (`HTTP_201_CREATED`). The endpoint has an option to enable a callback method making the API check on Celery the task result and send it to console (can be used to send the result to any other system).
 
 The **get** endpoint `/task` receives a parameter with the `task id` and returns the task status and results (when it's finished successfully). An API client needs to implement a strategy to retrieve the results from the API.
 
@@ -109,7 +109,7 @@ The docker-compose has all the services configured, and there is no need to have
 To launch all services, you need to run:
 
 ```bash
-docker-compose run client
+docker-compose run
 ```
 
 Be aware that there is no control over the startup process, so you can find yourself sending requests to an API or worker not ready.
@@ -124,6 +124,6 @@ Having all components running on different docker files shows the path to have s
 
 ## Next Steps
 
-- Add a simple ML model for gender identification from audio data.
 - Add different workers subscribed to different queues.
-- Add the option to send a callback URL to send the response when ready, to be an alternative to pull the response from the API.
+- Add a simple ML model for gender identification from audio data.
+- Figure how to consume from broker the results instead use FastAPI BackgroundTask.
