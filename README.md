@@ -65,6 +65,12 @@ pipenv run celery -A worker.worker worker --loglevel=INFO
 pipenv run uvicorn api.api:api --reload
 ```
 
+Flower is a monitoring UI for Celery that can be run with the command bellow. To know more about [Flower](https://flower.readthedocs.io/en/latest/index.html).
+
+```bash
+pipenv run flower --port=5555 --broker_api=http://guest:guest@localhost:8080/api/
+```
+
 And to run the client execute:
 
 ```bash
