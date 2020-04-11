@@ -11,9 +11,7 @@ from pydantic import BaseModel
 from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_200_OK,
-    HTTP_201_CREATED,
-    HTTP_202_ACCEPTED,
-    HTTP_500_INTERNAL_SERVER_ERROR
+    HTTP_201_CREATED
 )
 
 REDIS_HOST = getenv("REDIS_HOST", "127.0.0.1")
@@ -72,13 +70,10 @@ def send_result(task_id):
 
     output = TaskResult(
         id=task_id,
-        status=result.state
+        status=result.state,
+        error=str(result.info) if result.failed() else None,
+        result=result.get() if result.state == states.SUCCESS else None
     )
-
-    if result.failed():
-        output.error = str(result.info)
-    elif result.state == states.SUCCESS:
-        output.result = result.get()
 
     print(output)  # Send result to somewhere
 
@@ -97,22 +92,16 @@ def create_task(data: UrlItem, queue: BackgroundTasks):
 @api.get("/task/{task_id}")
 def get_task_result(task_id: str):
 
-    celery_result = worker.AsyncResult(task_id)
+    result = worker.AsyncResult(task_id)
 
     output = TaskResult(
         id=task_id,
-        status=celery_result.state
+        status=result.state,
+        error=str(result.info) if result.failed() else None,
+        result=result.get() if result.state == states.SUCCESS else None
     )
-    status_code = HTTP_202_ACCEPTED
-
-    if celery_result.failed():
-        output.error = str(celery_result.info)
-        status_code = HTTP_500_INTERNAL_SERVER_ERROR
-    elif celery_result.state == states.SUCCESS:
-        output.result = celery_result.get()
-        status_code = HTTP_200_OK
 
     return JSONResponse(
-        status_code=status_code,
+        status_code=HTTP_200_OK,
         content=output.dict()
     )
