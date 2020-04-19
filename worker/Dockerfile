@@ -14,4 +14,4 @@ COPY worker.py /app/worker.py
 
 EXPOSE 6379
 
-CMD celery -A worker worker --loglevel=INFO
+CMD celery worker -A worker.audio --loglevel=INFO

@@ -39,10 +39,10 @@ BACKEND = "redis://{userpass}{hostname}{port}{db}".format(
     db="/" + REDIS_DB if REDIS_DB else ""
 )
 
-worker = Celery("audio", broker=BROKER, backend=BACKEND)
+audio = Celery("audio", broker=BROKER, backend=BACKEND)
 
 
-@worker.task(bind=True, name="worker.audio_length")
+@audio.task(bind=True, name="audio.audio_length")
 def audio_length(self, audio_url: str) -> Dict[str, Any]:
 
     try:

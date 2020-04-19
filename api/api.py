@@ -43,10 +43,10 @@ BACKEND = "redis://{userpass}{hostname}{port}{db}".format(
 )
 
 api = FastAPI()
-worker = Celery(broker=BROKER, backend=BACKEND)
+audio = Celery(broker=BROKER, backend=BACKEND)
 
 TASKS = {
-    'length': 'worker.audio_length'
+    'length': 'audio.audio_length'
 }
 
 
@@ -64,7 +64,7 @@ class TaskResult(BaseModel):
 
 def send_result(task_id):
     while True:
-        result = worker.AsyncResult(task_id)
+        result = audio.AsyncResult(task_id)
         if result.state in states.READY_STATES:
             break
 
@@ -80,7 +80,7 @@ def send_result(task_id):
 
 @api.post("/audio/length", status_code=HTTP_201_CREATED)
 def create_task(data: UrlItem, queue: BackgroundTasks):
-    task = worker.send_task(
+    task = audio.send_task(
         name=TASKS['length'],
         kwargs={'audio_url': data.audio_url}
     )
@@ -92,7 +92,7 @@ def create_task(data: UrlItem, queue: BackgroundTasks):
 @api.get("/task/{task_id}")
 def get_task_result(task_id: str):
 
-    result = worker.AsyncResult(task_id)
+    result = audio.AsyncResult(task_id)
 
     output = TaskResult(
         id=task_id,

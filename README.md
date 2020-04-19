@@ -61,7 +61,7 @@ Before running all the components, you will need services to be a broker and dat
 You need to execute the commands below to start the API and Worker:
 
 ```bash
-pipenv run celery -A worker.worker worker --loglevel=INFO
+pipenv run celery worker -A worker.worker.audio --loglevel=INFO
 pipenv run uvicorn api.api:api --reload
 ```
 
