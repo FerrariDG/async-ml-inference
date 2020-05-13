@@ -14,13 +14,22 @@ diagrams = "==0.6.3"
 fastapi = "==0.49.0"
 uvicorn = "==0.11.3"
 requests = "==2.23.0"
-celery = {extras = ["redis", "librabbitmq"],version = "==4.4.0"}
+celery = {extras = ["redis"],version = "==4.4.0"}
 librosa = "==0.7.2"
 pydantic = "==1.4"
 joblib = "==0.14.1"
 redis = "==3.4.1"
 retrying = "==1.3.3"
 flower = "==0.9.4"
+beautifulsoup4 = "==4.9.0"
+numba = "==0.48.0"
 
 [scripts]
 diagram="python diagram/diagram.py"
+broker = "docker run -d --rm --hostname celery-rabbit --name celery-broker -p 8080:15672 -p 5672:5672 rabbitmq:3.8.2-management-alpine"
+backend = "docker run -d --rm --hostname celery-redis --name celery-backend -p 6379:6379 redis:5.0.7 redis-server --requirepass password"
+api = "uvicorn api.api:api --host 0.0.0.0 --port 5000 --reload --reload-dir api --debug"
+workerA = "celery worker -A workerA.audio --loglevel=INFO --concurrency=2 --hostname=wA@%h --queues audio -E --config=worker.configA"
+workerB = "celery worker -A workerB.euro --loglevel=INFO --concurrency=2 --hostname=wB@%h --queues euro -E --config=worker.configB"
+flower= "flower --port=5555 --broker_api=http://guest:guest@localhost:8080/api/"
+client = "python client/client.py"
