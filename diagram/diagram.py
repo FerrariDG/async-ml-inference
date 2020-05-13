@@ -34,7 +34,7 @@ with Diagram(
 
     broker = RabbitMQ("Broker")
 
-    database = Redis("Database")
+    database = Redis("Backend")
 
     worker = Pod("Workers")
 
