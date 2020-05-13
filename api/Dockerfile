@@ -10,6 +10,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY api.py /app/api.py
 
-EXPOSE 8000
+EXPOSE 5000 6379 5672
 
-CMD uvicorn api:api --host 0.0.0.0 --port 8000
+CMD uvicorn api:api --host 0.0.0.0 --port 5000
