@@ -1,2 +1,4 @@
-celery[redis, librabbitmq]==4.4.0
+beautifulsoup4==4.9.0
+celery[redis]==4.4.0
 librosa==0.7.2
+numba==0.48.0
