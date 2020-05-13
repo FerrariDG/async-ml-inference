@@ -1,7 +1,7 @@
 version: '3.4'
 
 services:
-    rabbitmq:
+    broker:
         container_name: celery-broker
         image: rabbitmq:3.8.2-management-alpine
         ports:
@@ -10,43 +10,64 @@ services:
         networks:
             - network
 
-    redis:
-        container_name: celery-database
+    backend:
+        container_name: celery-backend
         image: redis:5.0.7
         ports:
             - "6379:6379"
         networks:
             - network
+        command: redis-server --requirepass password
 
-    worker:
+    worker_a:
         build: ./worker
-        container_name: celery-worker
-        depends_on:
-            - redis
-            - rabbitmq
+        container_name: celery-workerA
         environment:
-            - REDIS_HOST=redis
-            - RABBITMQ_HOST=rabbitmq
+            - REDIS_HOST=backend
+            - REDIS_PORT=6379
+            - REDIS_DB=0
+            - REDIS_PASS=password
+            - RABBITMQ_HOST=broker
+            - RABBITMQ_PORT=5672
+            - RABBITMQ_USER=guest
+            - RABBITMQ_PASS=guest
         links:
-            - redis:redis
-            - rabbitmq:rabbitmq
+            - backend:backend
+            - broker:broker
         networks:
             - network
+        command: celery worker -A workerA.audio --loglevel=INFO --concurrency=2 --hostname=wA@%h --queues audio -E --config=configA
+
+    worker_b:
+        build: ./worker
+        container_name: celery-workerB
+        environment:
+            - REDIS_HOST=backend
+            - REDIS_PORT=6379
+            - REDIS_DB=0
+            - REDIS_PASS=password
+            - RABBITMQ_HOST=broker
+            - RABBITMQ_PORT=5672
+            - RABBITMQ_USER=guest
+            - RABBITMQ_PASS=guest
+        links:
+            - backend:backend
+            - broker:broker
+        networks:
+            - network
+        command: celery worker -A workerB.euro --loglevel=INFO --concurrency=2 --hostname=wB@%h --queues euro -E --config=configB
 
     api:
         build: ./api
         container_name: celery-api
-        depends_on:
-            - redis
-            - rabbitmq
         environment:
-            - REDIS_HOST=redis
-            - RABBITMQ_HOST=rabbitmq
+            - REDIS_HOST=backend
+            - RABBITMQ_HOST=broker
         links:
-            - redis:redis
-            - rabbitmq:rabbitmq
+            - backend:backend
+            - broker:broker
         ports:
-            - "8000:8000"
+            - "5000:5000"
         networks:
             - network
 
@@ -54,7 +75,7 @@ services:
         build: ./client
         container_name: celery-client
         environment:
-            - API_URL=http://api:8000
+            - API_URL=http://api:5000
         links:
             - api:api
         networks:
