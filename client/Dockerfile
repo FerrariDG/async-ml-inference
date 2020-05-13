@@ -10,6 +10,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY client.py /app/client.py
 
-EXPOSE 8000
+EXPOSE 5000
 
 CMD python client.py
