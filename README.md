@@ -4,7 +4,7 @@
 
 This repo is a Proof of Concept (PoC) to build a machine learning inference system using Python and the FastAPI and Celery frameworks.
 
-The idea is to have a client, that can be a frontend or backend app, making requests to an API which will extract insights from audio data. The process will be asynchronous using a task queue from Celery to have workers dealing with the inference process.
+The idea is to have a client, that can be a frontend or backend app, making requests to an API which will send tasks to a Celery infrastructure. The process will be asynchronous using a task queue from Celery to have workers dealing with task processing.
 
 The diagram below illustrates the idea deployed on Kubernetes pods and using RabbitMQ as the broker and Redis as the database.
 
@@ -16,11 +16,17 @@ To generate the diagram above, run: `pipenv run diagram`.
 
 ## Components
 
-### Worker
+### Client
 
-The Celery workers are responsible for consuming the task queue and store the results into the database. Using Redis as the database, the results will be stored using the `task id` as key and the `task return` as value.
+The `client` is a system that wants to extract features or insights from data and, for that, needs to call an API and send the requests.
 
-The workers can subscribe to specific queues and can execute different types of tasks.
+For the PoC, the `client` has two tasks:
+
+1. A list of files retrieved from the [The Open Speech Repository](http://www.voiptroubleshooter.com/open_speech/). The American English files are enumerated from 10 to 61 in a no sequential way. The `client` component has a sequential list from 10 to 65, which will make some URLs to fail since the file does not exist.
+
+1. A list of dates, between the current day and going back 15 days, to retrieve the EuroMillions number that were draw on each day. Since the draw doesn't happen every day, some of them will fail to retrieve the data from the website.
+
+After the `client` make the request with the URL, the API will send a `task id` which needs to be retrieved from the API with a pulling strategy.
 
 ### API
 
@@ -28,17 +34,25 @@ The `API` has two endpoints: one for post the tasks and one to get the results.
 
 The **post** endpoint `/audio/length` receives in the request body a URL containing an audio file to be analyzed. In this case, it will just get the audio length in seconds. The endpoint sends a task to the queue and returns a `task id` to the client with HTTP code response 201 (`HTTP_201_CREATED`). The endpoint has an option to enable a callback method making the API check on Celery the task result and send it to console (can be used to send the result to any other system).
 
-The **get** endpoint `/task` receives a parameter with the `task id` and returns the task status and results (when it's finished successfully). An API client needs to implement a strategy to retrieve the results from the API.
+The **post** endpoint `/euro/results` receives in the request body a reference date (DD-MM-YYYY) to scrap the EuroMillions balls and stars from a web page. In this case, it will just get the seven numbers draw. The endpoint sends a task to the queue and returns a `task id` to the client with HTTP code response 201 (`HTTP_201_CREATED`). The endpoint has an option to enable a callback method making the API check on Celery the task result and send it to console (can be used to send the result to any other system).
+
+The **get** endpoint `/task` receives a parameter with the `task id` and returns the task status and results (when it's finished successfully). An API client needs to implement a strategy to retrieve the results from the API. This endpoint can be used to retrieve results from all task types.
 
 The tasks have, basically, three statuses: `PENDING`, `FAILURE`, and `SUCCESS`.
 
-### Client
+### Worker
 
-The `client` is a system that wants to extract features or insights from audio data and, for that, needs to call an API and send a URL with the audio file.
+The Celery workers are responsible for consuming the task queue and store the results into the database. Using Redis as the database, the results will be stored using the `task id` as key and the `task return` as value.
 
-For the PoC, the `client` has a list of files retrieved from the [The Open Speech Repository](http://www.voiptroubleshooter.com/open_speech/). The American English files are enumerated from 10 to 61 in a no sequential way. The `client` component has a sequential list from 10 to 65, which will make some URLs to fail since the file does not exist.
+The workers can subscribe to specific queues and can execute different types of tasks.
 
-After the `client` make the request with the URL, the API will send a `task id` which needs to be retrieved from the API with a pulling strategy.
+#### WorkerA
+
+This worker receives an URL and tries to download an audio file and then extract and returns the audio length.
+
+#### WorkerB
+
+This worker receives a date and tries to scrap an EuroMillions results page and then extract and returns the numbers.
 
 ## External Dependencies
 
@@ -61,35 +75,42 @@ Before running all the components, you will need services to be a broker and dat
 You need to execute the commands below to start the API and Worker:
 
 ```bash
-pipenv run celery worker -A worker.worker.audio --loglevel=INFO
-pipenv run uvicorn api.api:api --reload
+pipenv run workerA
+
+pipenv run workerB
+
+pipenv run api
 ```
 
 Flower is a monitoring UI for Celery that can be run with the command bellow. To know more about [Flower](https://flower.readthedocs.io/en/latest/index.html).
 
 ```bash
-pipenv run flower --port=5555 --broker_api=http://guest:guest@localhost:8080/api/
+pipenv run flower
 ```
 
 And to run the client execute:
 
 ```bash
-pipenv run python client/client.py
+pipenv run client
 ```
+
+All commands use Pipenv shortcuts and the full command can be found at the `Pipfile` file.
 
 ### Local broker and database with docker
 
 The RabbitMQ server launched with the command bellow has a management UI where you can check for configs and monitoring usage of cluster. After run the command go to <http://localhost:8080>.
 
 ```bash
-docker run -d --rm --hostname celery-rabbit --name celery-broker -p 8080:15672 -p 5672:5672 rabbitmq:3.8.2-management-alpine
+pipenv run broker
 ```
 
 To launch the Redis database, execute the command below.
 
 ```bash
-docker run -d --rm --hostname celery-redis --name celery-database -p 6379:6379 redis:5.0.7
+pipenv run backend
 ```
+
+Both commands use Pipenv shortcuts and the full command can be found at the `Pipfile` file.
 
 ### Environment variables
 
@@ -97,7 +118,6 @@ docker run -d --rm --hostname celery-redis --name celery-database -p 6379:6379 r
 | ---               | --- |
 | REDIS_HOST        | Redis host address
 | REDIS_PORT        | Redis host port
-| REDIS_USER        | Redis username
 | REDIS_PASS        | Redis password
 | REDIS_DB          | Redis database number
 | RABBITMQ_HOST     | RabbitMQ host address
@@ -112,13 +132,32 @@ docker run -d --rm --hostname celery-redis --name celery-database -p 6379:6379 r
 
 The docker-compose has all the services configured, and there is no need to have a Redis or RabbitMQ instances already configured.
 
-To launch all services, you need to run:
+To launch build and images for the components, you need to run:
 
 ```bash
-docker-compose run
+docker-compose build
 ```
 
-Be aware that there is no control over the startup process, so you can find yourself sending requests to an API or worker not ready.
+Be aware that there is no control over the startup process, so you can find yourself sending requests to an API or worker not ready. So, it's safer to start the services one by one.
+
+When you run the workers, both broker and backend will run also.
+
+```bash
+docker-compose run --rm worker_a
+docker-compose run --rm worker_b
+```
+
+When you run the client, the API will be run also.
+
+```bash
+docker-compose run --rm client
+```
+
+To shutdown all services, run:
+
+```bash
+docker-compose down
+```
 
 ## Workers for Machine Learning Inference
 
@@ -130,6 +169,5 @@ Having all components running on different docker files shows the path to have s
 
 ## Next Steps
 
-- Add different workers subscribed to different queues.
-- Add a simple ML model for gender identification from audio data.
 - Figure how to consume from broker the results instead use FastAPI BackgroundTask.
+- Add a simple ML model for gender identification from audio data.
