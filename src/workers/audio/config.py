@@ -1,4 +1,4 @@
-"""."""
+"""Module with Celery configurations to Audio Length worker."""
 from kombu import Queue
 
 # Set worker to ack only when return or failing (unhandled expection)

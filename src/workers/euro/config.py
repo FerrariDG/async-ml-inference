@@ -1,4 +1,4 @@
-"""."""
+"""Module with Celery configurations to Euromillions Results worker."""
 from kombu import Queue
 
 task_acks_late = True

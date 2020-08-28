@@ -1,3 +1,4 @@
+"""Module to generate diagram figure."""
 from diagrams import Diagram
 from diagrams.onprem.inmemory import Redis
 from diagrams.onprem.queue import RabbitMQ
@@ -18,11 +19,10 @@ node_attr = {
     "fontcolor": "#000000"
 }
 
-
 with Diagram(
     name="",
     show=False,
-    filename="diagram/architecture",
+    filename="docs/diagram/architecture",
     graph_attr=graph_attr,
     node_attr=node_attr,
     edge_attr={"color": "#566573"}

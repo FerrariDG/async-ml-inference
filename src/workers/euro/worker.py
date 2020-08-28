@@ -1,3 +1,4 @@
+"""Celery worker for Euromillions results."""
 from urllib.request import urlopen
 from typing import Tuple
 
@@ -9,12 +10,12 @@ from celery import Celery, states
 from celery.exceptions import Ignore
 
 
-from celery_backend import (
+from backend import (
     is_backend_running,
     get_backend_url
 )
 
-from celery_broker import (
+from broker import (
     is_broker_running,
     get_broker_url
 )
@@ -51,7 +52,7 @@ def scrappy_result(self, draw_date: str) -> Tuple[int, ...]:
         raise Ignore()
 
     soup = BeautifulSoup(page, 'html.parser')
-    balls = soup.find('div', {'id': 'jsBallOrderCell'})
+    balls = soup.find('div', {'id': 'ballsDrawn'})
 
     if balls is None:
         self.update_state(

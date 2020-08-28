@@ -1,3 +1,4 @@
+"""Celery worker for audio Length extraction."""
 from io import BytesIO
 from sys import exit
 from time import sleep
@@ -12,12 +13,12 @@ from celery import Celery, states
 from celery.exceptions import Ignore
 from librosa import load, get_duration
 
-from celery_backend import (
+from backend import (
     is_backend_running,
     get_backend_url
 )
 
-from celery_broker import (
+from broker import (
     is_broker_running,
     get_broker_url
 )
