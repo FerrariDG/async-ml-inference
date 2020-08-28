@@ -8,7 +8,7 @@ The idea is to have a client, that can be a frontend or backend app, making requ
 
 The diagram below illustrates the idea deployed on Kubernetes pods and using RabbitMQ as the broker and Redis as the database.
 
-![Architecture](docs/iagram/architecture.png)
+![Architecture](docs/diagram/architecture.png)
 
 To generate the diagram above, run: `pipenv run diagram` (you will need Graphviz installed).
 
