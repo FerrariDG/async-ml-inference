@@ -10,8 +10,8 @@ RUN apt-get update -yqq && \
     pip install --no-cache-dir --compile -r requirements.txt && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
 
-COPY worker.py /app/worker.py
+COPY . /app
 
-EXPOSE 6379
+EXPOSE 6379 5672
 
-CMD celery -A worker worker --loglevel=INFO
+CMD celery worker -A worker.audio --loglevel=INFO

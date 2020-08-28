@@ -1,6 +1,5 @@
 from typing import (
     Any,
-    Dict,
     Optional
 )
 from os import getenv
@@ -16,8 +15,7 @@ from starlette.status import (
 
 REDIS_HOST = getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = getenv("REDIS_PORT", "6379")
-REDIS_USER = getenv("REDIS_USER", "")
-REDIS_PASS = getenv("REDIS_PASS", "")
+REDIS_PASS = getenv("REDIS_PASS", "password")
 REDIS_DB = getenv("REDIS_DB_BACKEND", "0")
 
 RABBITMQ_HOST = getenv("RABBITMQ_HOST", "127.0.0.1")
@@ -35,18 +33,19 @@ BROKER = "amqp://{userpass}{hostname}{port}{vhost}".format(
 )
 
 # Redis connection string: redis://user:pass@hostname:port/db_number
-BACKEND = "redis://{userpass}{hostname}{port}{db}".format(
+BACKEND = "redis://{password}{hostname}{port}{db}".format(
     hostname=REDIS_HOST,
-    userpass=REDIS_USER + ":" + REDIS_PASS + "@" if REDIS_USER else "",
+    password=':' + REDIS_PASS + '@' if REDIS_PASS else '',
     port=":" + REDIS_PORT if REDIS_PORT else "",
     db="/" + REDIS_DB if REDIS_DB else ""
 )
 
 api = FastAPI()
-worker = Celery(broker=BROKER, backend=BACKEND)
+audio = Celery(broker=BROKER, backend=BACKEND)
 
 TASKS = {
-    'length': 'worker.audio_length'
+    'length': 'audio.audio_length',
+    'results': 'euro.scrappy_result'
 }
 
 
@@ -55,16 +54,21 @@ class UrlItem(BaseModel):
     callback: bool = False
 
 
+class EuroDate(BaseModel):
+    draw_date: str
+    callback: bool = False
+
+
 class TaskResult(BaseModel):
     id: str
     status: str
     error: Optional[str] = None
-    result: Optional[Dict[Any, Any]] = None
+    result: Optional[Any] = None
 
 
 def send_result(task_id):
     while True:
-        result = worker.AsyncResult(task_id)
+        result = audio.AsyncResult(task_id)
         if result.state in states.READY_STATES:
             break
 
@@ -79,10 +83,23 @@ def send_result(task_id):
 
 
 @api.post("/audio/length", status_code=HTTP_201_CREATED)
-def create_task(data: UrlItem, queue: BackgroundTasks):
-    task = worker.send_task(
+def create_audio_task(data: UrlItem, queue: BackgroundTasks):
+    task = audio.send_task(
         name=TASKS['length'],
-        kwargs={'audio_url': data.audio_url}
+        kwargs={'audio_url': data.audio_url},
+        queue='audio'
+    )
+    if data.callback:
+        queue.add_task(send_result, task.id)
+    return {"id": task.id}
+
+
+@api.post("/euro/results", status_code=HTTP_201_CREATED)
+def create_euro_task(data: EuroDate, queue: BackgroundTasks):
+    task = audio.send_task(
+        name=TASKS['results'],
+        kwargs={'draw_date': data.draw_date},
+        queue='euro'
     )
     if data.callback:
         queue.add_task(send_result, task.id)
@@ -92,7 +109,7 @@ def create_task(data: UrlItem, queue: BackgroundTasks):
 @api.get("/task/{task_id}")
 def get_task_result(task_id: str):
 
-    result = worker.AsyncResult(task_id)
+    result = audio.AsyncResult(task_id)
 
     output = TaskResult(
         id=task_id,
