@@ -67,6 +67,8 @@ if __name__ == "__main__":
 
     tasks = euro_tasks + audio_tasks
 
+    input("Press Enter to get the results...")
+
     print("Geting results")
     results = Parallel(n_jobs=2, prefer="threads")(
         delayed(get_result)(task_id)
