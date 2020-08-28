@@ -19,9 +19,9 @@ services:
             - network
         command: redis-server --requirepass password
 
-    worker_a:
-        build: ./worker
-        container_name: celery-workerA
+    audio:
+        build: ./src/workers
+        container_name: celery-wAudio
         environment:
             - REDIS_HOST=backend
             - REDIS_PORT=6379
@@ -36,11 +36,11 @@ services:
             - broker:broker
         networks:
             - network
-        command: celery worker -A workerA.audio --loglevel=INFO --concurrency=2 --hostname=wA@%h --queues audio -E --config=configA
+        command: celery worker -A audio.worker.audio --loglevel=INFO --concurrency=2 --hostname=wAudio@%h --queues audio -E --config=audio.config
 
-    worker_b:
-        build: ./worker
-        container_name: celery-workerB
+    euro:
+        build: ./src/workers
+        container_name: celery-wEuro
         environment:
             - REDIS_HOST=backend
             - REDIS_PORT=6379
@@ -55,10 +55,10 @@ services:
             - broker:broker
         networks:
             - network
-        command: celery worker -A workerB.euro --loglevel=INFO --concurrency=2 --hostname=wB@%h --queues euro -E --config=configB
+        command: celery worker -A euro.worker.euro --loglevel=INFO --concurrency=2 --hostname=wEuro@%h --queues euro -E --config=euro.config
 
     api:
-        build: ./api
+        build: ./src/api
         container_name: celery-api
         environment:
             - REDIS_HOST=backend
@@ -72,7 +72,7 @@ services:
             - network
 
     client:
-        build: ./client
+        build: ./src/client
         container_name: celery-client
         environment:
             - API_URL=http://api:5000
