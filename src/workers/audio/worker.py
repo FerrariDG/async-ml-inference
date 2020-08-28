@@ -13,16 +13,23 @@ from celery import Celery, states
 from celery.exceptions import Ignore
 from librosa import load, get_duration
 
-from workers.utils import backend
-from workers.utils import broker
+from backend import (
+    is_backend_running,
+    get_backend_url
+)
 
-if not backend.is_backend_running():
+from broker import (
+    is_broker_running,
+    get_broker_url
+)
+
+if not is_backend_running():
     exit()
 
-if not broker.is_broker_running():
+if not is_broker_running():
     exit()
 
-audio = Celery("audio", broker=broker.get_broker_url(), backend=backend.get_backend_url())
+audio = Celery("audio", broker=get_broker_url(), backend=get_backend_url())
 
 
 @audio.task(bind=True, name="audio.audio_length")
