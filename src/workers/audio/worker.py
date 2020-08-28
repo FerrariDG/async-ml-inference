@@ -13,8 +13,8 @@ from celery import Celery, states
 from celery.exceptions import Ignore
 from librosa import load, get_duration
 
-from src.workers.utils import backend
-from src.workers.utils import broker
+from workers.utils import backend
+from workers.utils import broker
 
 if not backend.is_backend_running():
     exit()

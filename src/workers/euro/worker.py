@@ -10,12 +10,12 @@ from celery import Celery, states
 from celery.exceptions import Ignore
 
 
-from src.workers.utils.backend import (
+from workers.utils.backend import (
     is_backend_running,
     get_backend_url
 )
 
-from src.workers.utils.broker import (
+from workers.utils.broker import (
     is_broker_running,
     get_broker_url
 )
