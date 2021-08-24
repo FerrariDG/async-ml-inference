@@ -13,7 +13,7 @@ pydocstyle = "==5.0.2"
 [packages]
 beautifulsoup4 = "==4.9.0"
 celery = {extras = ["redis"],version = "==4.4.0"}
-fastapi = "==0.49.0"
+fastapi = "==0.65.2"
 flower = "==0.9.4"
 joblib = "==0.14.1"
 librosa = "==0.7.2"
