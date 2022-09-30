@@ -15,7 +15,7 @@ beautifulsoup4 = "==4.9.0"
 celery = {extras = ["redis"],version = "==4.4.0"}
 fastapi = "==0.49.0"
 flower = "==0.9.4"
-joblib = "==0.14.1"
+joblib = "==1.2.0"
 librosa = "==0.7.2"
 numba = "==0.48.0"
 pydantic = "==1.6.2"
